@@ -1,0 +1,93 @@
+import discord
+from discord.ext import commands
+import requests
+import pyttsx3
+engine = pyttsx3.init()
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+
+# Función para obtener el clima a través de la API wttr.in
+def get_weather(city: str) -> str:
+    """
+    Obtiene datos del clima para la ciudad especificada.
+    
+    Parámetros:
+        city (str): Nombre de la ciudad
+    Retorna:
+        str: Información del clima o mensaje de error
+    """
+    base_url = f"https://wttr.in/{city}?format=%C+%t&lang=es"  # URL de solicitud con formato (descripción y temperatura)
+    response = requests.get(base_url)  # Realizar una solicitud GET a la API
+    if response.status_code == 200:  # Si la solicitud es exitosa (código 200)
+        return response.text.strip()  # Retornar la respuesta en texto sin espacios extra
+    else:
+        return "No se pudo obtener la información del clima. Por favor, inténtalo más tarde."  # Retornar el mensaje de error
+
+# Función para la síntesis de voz
+def speak(text: str):
+    """
+    Convierte el texto en voz usando pyttsx3.
+    Parámetros:
+        text (str): Texto a vocalizar
+    """
+    engine.say(text)  # Pasar el texto para la síntesis
+    engine.runAndWait()  # Ejecutar la síntesis de voz y esperar a que termine
+
+def get_fact() -> str:
+    """
+    Recupera un dato curioso aleatorio desde la API.
+    Retorna:
+        str: El texto del dato en inglés o un mensaje de error.
+    """
+    base_url = "https://uselessfacts.jsph.pl/random.json"
+    response = requests.get(base_url)
+    if response.status_code == 200:
+        data = response.json()
+        print(data)  # Para depuración
+        fact_text = data.get("text", "Could not retrieve the fact.")  # Obtiene el texto directamente
+        return fact_text  # Devuelve el texto tal como lo envía la API
+    else:
+        return "Could not retrieve a fact. Please try again."
+
+
+@bot.command()  # Define un comando llamado "start" para el bot
+async def start(ctx):
+    """
+    Comando para dar la bienvenida al usuario.
+    Parámetros:
+        ctx: Contexto del comando (información sobre la invocación del comando)
+    """
+    mensaje = "¡Hola! Soy tu bot."
+    await ctx.send(mensaje)  # Envía el mensaje de bienvenida al canal de Discord
+
+# Comando para obtener el clima
+@bot.command()
+async def weather(ctx, *, city: str):
+    """
+    Comando para obtener información del clima y vocalizarla.
+    Parámetros:
+        ctx: Contexto del comando (información sobre la ejecución del comando)
+        city (str): Nombre de la ciudad
+    """
+    weather_info = get_weather(city)  # Obtener los datos del clima para la ciudad especificada
+    await ctx.send(f"Clima en {city}: {weather_info}")  # Enviar la información del clima al canal de Discord
+    speak(weather_info)  # Vocalizar la información obtenida
+
+@bot.command()  # Define un comando llamado "fact" para el bot
+async def fact(ctx):
+    """
+    Comando para recuperar un dato curioso aleatorio y vocalizarlo.
+    Parámetros:
+        ctx: Contexto del comando (información sobre la invocación del comando)
+    """
+    random_fact = get_fact()  # Obtiene un dato curioso aleatorio y lo traduce al inglés
+    await ctx.send(f"Here's an interesting fact: {random_fact}")  # Envía el dato al canal de Discord
+    speak(random_fact)  # Vocaliza el dato usando pyttsx3
+
+
+
+
+
+bot.run("TOKEN")
